@@ -1,0 +1,41 @@
+# Environment & Config
+.env
+.env.local
+*.pyc
+__pycache__/
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Data (optional: synchronisiere diese mit Railway Persistent Storage)
+*.json
+amogus_data.json
+amogus_logs.json
+amogus_users.json
+admin_token.txt
+
+# OS
+.DS_Store
+Thumbs.db
+.fuse_hidden*
+
+# Venv (für lokales Testing)
+venv/
+env/
+ENV/
+
+# Coverage & Tests
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Logs
+*.log
+logs/

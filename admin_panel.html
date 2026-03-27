@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>⚡ Admin — Among Us Bot</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #020408;
+  --surface:  #060c18;
+  --card:     #0a1220;
+  --border:   rgba(0,200,255,0.12);
+  --border2:  rgba(0,200,255,0.25);
+  --cyan:     #00c8ff;
+  --green:    #00ff88;
+  --red:      #ff3355;
+  --yellow:   #ffcc00;
+  --orange:   #ff8800;
+  --purple:   #aa66ff;
+  --text:     #b0cce0;
+  --muted:    #3a5060;
+  --glow-c:   0 0 20px rgba(0,200,255,0.3);
+  --glow-g:   0 0 20px rgba(0,255,136,0.3);
+  --font-mono:'Share Tech Mono', monospace;
+  --font-ui:  'Rajdhani', sans-serif;
+}
+
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+html,body { height:100%; overflow:hidden; background:var(--bg); color:var(--text); font-family:var(--font-ui); }
+
+/* ══ GRID LAYOUT ══ */
+.shell {
+  display:grid;
+  grid-template-columns: 220px 1fr;
+  grid-template-rows: 56px 1fr;
+  height:100vh;
+  overflow:hidden;
+}
+
+/* ══ TOPBAR ══ */
+.topbar {
+  grid-column: 1/-1;
+  display:flex; align-items:center; gap:16px;
+  padding:0 24px;
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  position:relative;
+  z-index:50;
+}
+
+.topbar-logo {
+  font-family:var(--font-mono);
+  font-size:15px;
+  color:var(--cyan);
+  letter-spacing:0.1em;
+  text-shadow:var(--glow-c);
+  display:flex; align-items:center; gap:8px;
+}
+
+.topbar-logo::before {
+  content:'▸';
+  color:var(--green);
+  animation:blink-slow 2s ease-in-out infinite;
+}
+
+@keyframes blink-slow { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+.topbar-id {
+  margin-left:auto;
+  font-family:var(--font-mono);
+  font-size:11px;
+  color:var(--muted);
+  letter-spacing:0.06em;
+}
+
+.topbar-id span {
+  color:var(--green);
+  background:rgba(0,255,136,0.08);
+  border:1px solid rgba(0,255,136,0.2);
+  padding:2px 10px;
+  border-radius:4px;
+  margin-left:8px;
+}
+
+.status-orb {
+  width:8px; height:8px; border-radius:50%;
+  background:var(--green);
+  box-shadow:0 0 8px var(--green);
+  margin-left:12px;
+  animation:blink-slow 1.5s ease-in-out infinite;
+}
+
+.logout-btn {
+  height:28px; padding:0 14px;
+  background:rgba(255,51,85,0.1); border:1px solid rgba(255,51,85,0.3);
+  border-radius:4px; color:var(--red);
+  font-family:var(--font-mono); font-size:10px;
+  letter-spacing:0.08em; cursor:pointer;
+  transition:all 0.2s;
+}
+.logout-btn:hover { background:var(--red); color:#fff; }
+
+/* ══ SIDEBAR ══ */
+.sidebar {
+  background:var(--surface);
+  border-right:1px solid var(--border);
+  padding:20px 0;
+  display:flex; flex-direction:column; gap:2px;
+  overflow-y:auto;
+}
+
+.nav-section {
+  padding:8px 16px 4px;
+  font-size:10px;
+  color:var(--muted);
+  letter-spacing:0.16em;
+  text-transform:uppercase;
+}
+
+.nav-item {
+  display:flex; align-items:center; gap:10px;
+  padding:9px 20px;
+  font-family:var(--font-ui);
+  font-size:14px;
+  font-weight:500;
+  color:var(--text);
+  cursor:pointer;
+  border-left:3px solid transparent;
+  transition:all 0.15s;
+  letter-spacing:0.04em;
+  position:relative;
+}
+
+.nav-item:hover { background:rgba(0,200,255,0.05); color:var(--cyan); }
+.nav-item.active {
+  background:rgba(0,200,255,0.08);
+  border-left-color:var(--cyan);
+  color:var(--cyan);
+}
+
+.nav-badge {
+  margin-left:auto;
+  background:rgba(0,200,255,0.15);
+  border:1px solid rgba(0,200,255,0.3);
+  color:var(--cyan);
+  font-family:var(--font-mono);
+  font-size:10px;
+  padding:1px 7px;
+  border-radius:10px;
+  min-width:24px;
+  text-align:center;
+}
+
+/* ══ MAIN CONTENT ══ */
+.main {
+  overflow-y:auto;
+  background:var(--bg);
+  position:relative;
+}
+
+/* Scanline texture */
+.main::before {
+  content:'';
+  position:fixed;
+  inset:56px 0 0 220px;
+  background:repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,200,255,0.015) 2px, rgba(0,200,255,0.015) 4px);
+  pointer-events:none;
+  z-index:0;
+}
+
+.view {
+  display:none;
+  padding:24px;
+  position:relative;
+  z-index:1;
+  animation:fadein 0.2s ease both;
+}
+.view.active { display:block; }
+@keyframes fadein { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+/* ══ VIEW HEADER ══ */
+.view-hd {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:24px; flex-wrap:wrap; gap:12px;
+}
+
+.view-title {
+  font-family:var(--font-mono);
+  font-size:18px;
+  color:var(--cyan);
+  letter-spacing:0.1em;
+  text-shadow:var(--glow-c);
+  display:flex; align-items:center; gap:10px;
+}
+.view-title::before { content:'//'; color:var(--muted); font-size:14px; }
+
+/* ══ STAT CARDS ══ */
+.kpi-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+  gap:12px;
+  margin-bottom:24px;
+}
+
+.kpi {
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:16px;
+  position:relative;
+  overflow:hidden;
+  transition:border-color 0.2s;
+}
+.kpi:hover { border-color:var(--border2); }
+.kpi::after {
+  content:'';
+  position:absolute; top:0; left:0; right:0; height:1px;
+  background:linear-gradient(90deg,transparent,var(--cyan),transparent);
+  opacity:0.4;
+}
+
+.kpi-val {
+  font-family:var(--font-mono);
+  font-size:30px;
+  font-weight:700;
+  line-height:1;
+  margin-bottom:6px;
+  transition:all 0.4s;
+}
+.kpi-val.c { color:var(--cyan); text-shadow:var(--glow-c); }
+.kpi-val.g { color:var(--green); text-shadow:var(--glow-g); }
+.kpi-val.y { color:var(--yellow); }
+.kpi-val.r { color:var(--red); }
+.kpi-val.p { color:var(--purple); }
+
+.kpi-lbl {
+  font-size:11px;
+  color:var(--muted);
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+}
+
+/* ══ DATA TABLE ══ */
+.table-wrap {
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:8px;
+  overflow:hidden;
+  margin-bottom:20px;
+}
+
+.table-toolbar {
+  display:flex; align-items:center; gap:12px;
+  padding:12px 16px;
+  border-bottom:1px solid var(--border);
+  flex-wrap:wrap;
+}
+
+.search-input {
+  background:rgba(0,0,0,0.4);
+  border:1px solid var(--border);
+  border-radius:6px;
+  padding:6px 14px;
+  height:34px;
+  color:var(--text);
+  font-family:var(--font-mono);
+  font-size:12px;
+  outline:none;
+  width:240px;
+  transition:border-color 0.2s;
+}
+.search-input:focus { border-color:var(--cyan); }
+.search-input::placeholder { color:var(--muted); }
+
+.table-count {
+  font-family:var(--font-mono);
+  font-size:11px;
+  color:var(--muted);
+  margin-left:auto;
+}
+
+table {
+  width:100%;
+  border-collapse:collapse;
+}
+thead tr {
+  background:rgba(0,200,255,0.05);
+  border-bottom:1px solid var(--border);
+}
+th {
+  padding:10px 16px;
+  font-family:var(--font-mono);
+  font-size:10px;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  color:var(--muted);
+  text-align:left;
+  white-space:nowrap;
+  cursor:pointer;
+  user-select:none;
+}
+th:hover { color:var(--cyan); }
+th.sorted { color:var(--cyan); }
+
+tbody tr {
+  border-bottom:1px solid rgba(0,200,255,0.05);
+  transition:background 0.15s;
+  cursor:pointer;
+}
+tbody tr:hover { background:rgba(0,200,255,0.04); }
+tbody tr:last-child { border-bottom:none; }
+
+td {
+  padding:10px 16px;
+  font-size:13px;
+  font-weight:500;
+  white-space:nowrap;
+}
+
+.user-cell {
+  display:flex; align-items:center; gap:10px;
+}
+
+.avatar {
+  width:30px; height:30px; border-radius:50%;
+  border:1px solid var(--border2);
+  background:rgba(0,200,255,0.1);
+  display:flex; align-items:center; justify-content:center;
+  font-size:13px;
+  overflow:hidden;
+  flex-shrink:0;
+}
+.avatar img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+
+.mono { font-family:var(--font-mono); font-size:11px; color:var(--muted); }
+
+.pill {
+  display:inline-flex; align-items:center;
+  padding:2px 8px; border-radius:10px;
+  font-family:var(--font-mono); font-size:10px; font-weight:600;
+  border:1px solid currentColor;
+}
+.pill.g { color:var(--green);  background:rgba(0,255,136,0.08); }
+.pill.y { color:var(--yellow); background:rgba(255,204,0,0.08); }
+.pill.r { color:var(--red);    background:rgba(255,51,85,0.08); }
+.pill.c { color:var(--cyan);   background:rgba(0,200,255,0.08); }
+.pill.p { color:var(--purple); background:rgba(170,102,255,0.08); }
+
+/* ══ USER DRAWER (detail panel) ══ */
+#drawer-overlay {
+  display:none;
+  position:fixed; inset:0;
+  background:rgba(0,0,0,0.6);
+  z-index:100;
+  backdrop-filter:blur(4px);
+}
+#drawer-overlay.open { display:block; }
+
+#drawer {
+  position:fixed;
+  top:0; right:0; bottom:0;
+  width:min(520px,100vw);
+  background:var(--surface);
+  border-left:1px solid var(--border2);
+  z-index:101;
+  transform:translateX(100%);
+  transition:transform 0.3s cubic-bezier(.4,0,.2,1);
+  overflow-y:auto;
+  display:flex; flex-direction:column;
+}
+#drawer.open { transform:translateX(0); }
+
+.drawer-header {
+  display:flex; align-items:center; gap:14px;
+  padding:20px 24px;
+  border-bottom:1px solid var(--border);
+  position:sticky; top:0;
+  background:var(--surface);
+  z-index:2;
+}
+
+.drawer-avatar {
+  width:52px; height:52px; border-radius:50%;
+  border:2px solid var(--cyan);
+  background:rgba(0,200,255,0.1);
+  display:flex; align-items:center; justify-content:center;
+  font-size:22px;
+  overflow:hidden; flex-shrink:0;
+  box-shadow:var(--glow-c);
+}
+.drawer-avatar img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+
+.drawer-name { font-size:18px; font-weight:700; color:var(--cyan); }
+.drawer-id   { font-family:var(--font-mono); font-size:11px; color:var(--muted); margin-top:2px; }
+
+.drawer-close {
+  margin-left:auto;
+  width:32px; height:32px;
+  background:rgba(255,51,85,0.1); border:1px solid rgba(255,51,85,0.3);
+  border-radius:6px; color:var(--red); font-size:16px;
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+  transition:all 0.2s; flex-shrink:0;
+}
+.drawer-close:hover { background:var(--red); color:#fff; }
+
+.drawer-body { padding:20px 24px; flex:1; }
+
+.d-section { margin-bottom:24px; }
+.d-title {
+  font-family:var(--font-mono); font-size:10px;
+  color:var(--muted); letter-spacing:0.16em; text-transform:uppercase;
+  margin-bottom:12px; display:flex; align-items:center; gap:8px;
+}
+.d-title::after { content:''; flex:1; height:1px; background:var(--border); }
+
+.d-grid {
+  display:grid; grid-template-columns:1fr 1fr; gap:10px;
+}
+
+.d-stat {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:6px; padding:12px;
+}
+.d-stat-val { font-family:var(--font-mono); font-size:22px; font-weight:700; line-height:1; margin-bottom:4px; }
+.d-stat-lbl { font-size:10px; color:var(--muted); letter-spacing:0.1em; text-transform:uppercase; }
+
+.d-row {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:8px 12px;
+  background:var(--card); border:1px solid var(--border);
+  border-radius:6px; margin-bottom:6px;
+  font-size:12px;
+}
+.d-row-key { color:var(--muted); font-family:var(--font-mono); font-size:11px; }
+.d-row-val { color:var(--text); font-weight:600; }
+
+/* Vote history timeline */
+.vote-entry {
+  display:flex; align-items:center; gap:10px;
+  padding:7px 0;
+  border-bottom:1px solid rgba(0,200,255,0.06);
+  font-size:12px;
+}
+.vote-entry:last-child { border-bottom:none; }
+.vote-icon { font-size:14px; flex-shrink:0; }
+.vote-time { font-family:var(--font-mono); font-size:10px; color:var(--muted); margin-left:auto; }
+
+/* ══ LOG TABLE ══ */
+.log-row {
+  display:grid;
+  grid-template-columns: 130px 160px 80px 1fr;
+  gap:0;
+  padding:7px 16px;
+  border-bottom:1px solid rgba(0,200,255,0.04);
+  font-size:12px;
+  font-family:var(--font-mono);
+  transition:background 0.1s;
+}
+.log-row:hover { background:rgba(0,200,255,0.03); }
+.log-row.hd {
+  background:rgba(0,200,255,0.05);
+  border-bottom:1px solid var(--border);
+  font-size:10px; letter-spacing:0.1em; text-transform:uppercase;
+  color:var(--muted); padding:9px 16px;
+}
+.log-ts   { color:var(--muted); }
+.log-user { color:var(--cyan); }
+.log-cmd  { color:var(--yellow); }
+.log-params { color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* ══ CHART BAR ══ */
+.bar-chart { display:flex; flex-direction:column; gap:8px; }
+.bar-row { display:flex; align-items:center; gap:10px; }
+.bar-label { font-family:var(--font-mono); font-size:11px; color:var(--muted); width:80px; text-align:right; flex-shrink:0; }
+.bar-track { flex:1; height:20px; background:rgba(0,200,255,0.06); border-radius:3px; overflow:hidden; position:relative; }
+.bar-fill { height:100%; border-radius:3px; transition:width 0.6s cubic-bezier(.34,1.56,.64,1); }
+.bar-val { font-family:var(--font-mono); font-size:11px; color:var(--text); width:40px; text-align:right; flex-shrink:0; }
+
+/* ══ ACTIVITY CHART ══ */
+#activity-canvas { width:100%; height:120px; }
+
+/* ══ EMPTY STATE ══ */
+.empty {
+  text-align:center; padding:48px; color:var(--muted);
+  font-family:var(--font-mono); font-size:13px;
+}
+.empty .ico { font-size:40px; margin-bottom:12px; }
+
+/* ══ LOADING ══ */
+.loading {
+  display:flex; align-items:center; gap:8px;
+  font-family:var(--font-mono); font-size:12px; color:var(--muted);
+  padding:24px;
+}
+.spin {
+  width:16px; height:16px; border-radius:50%;
+  border:2px solid var(--border2); border-top-color:var(--cyan);
+  animation:spin 0.8s linear infinite;
+}
+@keyframes spin { to{ transform:rotate(360deg); } }
+
+/* ══ TOAST ══ */
+#toast {
+  position:fixed; bottom:20px; right:20px;
+  background:var(--card); border:1px solid var(--cyan);
+  border-radius:8px; padding:10px 18px;
+  font-family:var(--font-mono); font-size:12px; color:var(--cyan);
+  z-index:200; transform:translateY(60px); opacity:0;
+  transition:all 0.3s cubic-bezier(.34,1.56,.64,1); pointer-events:none;
+  box-shadow:var(--glow-c);
+}
+#toast.show { transform:translateY(0); opacity:1; }
+#toast.err  { border-color:var(--red); color:var(--red); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width:6px; height:6px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--border2); border-radius:3px; }
+::-webkit-scrollbar-thumb:hover { background:var(--cyan); }
+
+@media(max-width:700px){
+  .shell { grid-template-columns:1fr; grid-template-rows:56px auto 1fr; }
+  .sidebar { grid-row:2; flex-direction:row; overflow-x:auto; padding:8px 12px; }
+  .main::before { inset:0; }
+  .log-row { grid-template-columns:1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ══ TOPBAR ══════════════════════════════ -->
+  <div class="topbar">
+    <div class="topbar-logo">AMOGUS ADMIN TERMINAL</div>
+    <div class="topbar-id">
+      AUTHORIZED
+      <span>ID: 148269980024688240</span>
+    </div>
+    <div class="status-orb" id="status-orb"></div>
+    <button class="logout-btn" onclick="logout()">⏻ LOGOUT</button>
+  </div>
+
+  <!-- ══ SIDEBAR ════════════════════════════ -->
+  <nav class="sidebar">
+    <div class="nav-section">Overview</div>
+    <div class="nav-item active" onclick="showView('dashboard')" id="nav-dashboard">
+      <span>◈</span> Dashboard
+      <span class="nav-badge" id="nb-guilds">—</span>
+    </div>
+
+    <div class="nav-section">Users</div>
+    <div class="nav-item" onclick="showView('users')" id="nav-users">
+      <span>◉</span> Alle User
+      <span class="nav-badge" id="nb-users">—</span>
+    </div>
+
+    <div class="nav-section">Server</div>
+    <div class="nav-item" onclick="showView('guilds')" id="nav-guilds">
+      <span>⬡</span> Guilds
+    </div>
+    <div class="nav-item" onclick="showView('polls')" id="nav-polls">
+      <span>◌</span> Umfragen
+    </div>
+
+    <div class="nav-section">Logs</div>
+    <div class="nav-item" onclick="showView('logs')" id="nav-logs">
+      <span>≡</span> Bot Logs
+      <span class="nav-badge" id="nb-logs">—</span>
+    </div>
+  </nav>
+
+  <!-- ══ MAIN ═══════════════════════════════ -->
+  <main class="main">
+
+    <!-- DASHBOARD ─────────────────────────── -->
+    <div class="view active" id="view-dashboard">
+      <div class="view-hd">
+        <div class="view-title">DASHBOARD</div>
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--muted)" id="dash-updated">—</div>
+      </div>
+
+      <div class="kpi-grid" id="kpi-grid">
+        <div class="kpi"><div class="kpi-val c" id="kpi-users">—</div><div class="kpi-lbl">Gesamte User</div></div>
+        <div class="kpi"><div class="kpi-val g" id="kpi-guilds">—</div><div class="kpi-lbl">Guilds</div></div>
+        <div class="kpi"><div class="kpi-val y" id="kpi-commands">—</div><div class="kpi-lbl">Commands total</div></div>
+        <div class="kpi"><div class="kpi-val p" id="kpi-votes">—</div><div class="kpi-lbl">Abstimmungen</div></div>
+        <div class="kpi"><div class="kpi-val r" id="kpi-games">—</div><div class="kpi-lbl">Spiele gestartet</div></div>
+      </div>
+
+      <!-- Top Users -->
+      <div class="table-wrap" style="margin-bottom:16px">
+        <div class="table-toolbar">
+          <span style="font-family:var(--font-mono);font-size:11px;color:var(--cyan)">▸ TOP SPIELER</span>
+        </div>
+        <div id="top-users-list"></div>
+      </div>
+
+      <!-- Activity Chart -->
+      <div class="table-wrap">
+        <div class="table-toolbar">
+          <span style="font-family:var(--font-mono);font-size:11px;color:var(--cyan)">▸ ABSTIMMUNGEN (7 TAGE)</span>
+        </div>
+        <div style="padding:16px 20px">
+          <div id="activity-bars" class="bar-chart"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- USERS ───────────────────────────── -->
+    <div class="view" id="view-users">
+      <div class="view-hd">
+        <div class="view-title">USER DATABASE</div>
+        <button class="logout-btn" style="border-color:var(--cyan);color:var(--cyan);background:rgba(0,200,255,0.08)"
+                onclick="loadUsers()">↻ Refresh</button>
+      </div>
+      <div class="table-wrap">
+        <div class="table-toolbar">
+          <input class="search-input" id="user-search" placeholder="User suchen…" oninput="filterUsers()">
+          <span class="table-count" id="user-count">— Einträge</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th onclick="sortUsers('display')">User ↕</th>
+              <th onclick="sortUsers('total_games')">Spiele ↕</th>
+              <th onclick="sortUsers('on_time_count')">Pünktlich ↕</th>
+              <th onclick="sortUsers('late_count')">Später ↕</th>
+              <th onclick="sortUsers('absent_count')">Abwesend ↕</th>
+              <th onclick="sortUsers('command_count')">Commands ↕</th>
+              <th onclick="sortUsers('last_seen')">Zuletzt aktiv ↕</th>
+            </tr>
+          </thead>
+          <tbody id="users-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- GUILDS ──────────────────────────── -->
+    <div class="view" id="view-guilds">
+      <div class="view-hd">
+        <div class="view-title">GUILD OVERVIEW</div>
+      </div>
+      <div id="guilds-content"></div>
+    </div>
+
+    <!-- POLLS ───────────────────────────── -->
+    <div class="view" id="view-polls">
+      <div class="view-hd">
+        <div class="view-title">AKTIVE UMFRAGEN</div>
+      </div>
+      <div id="polls-content"></div>
+    </div>
+
+    <!-- LOGS ────────────────────────────── -->
+    <div class="view" id="view-logs">
+      <div class="view-hd">
+        <div class="view-title">COMMAND LOGS</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input class="search-input" id="log-search" placeholder="Filtern…" oninput="filterLogs()" style="width:180px">
+          <button class="logout-btn" style="border-color:var(--cyan);color:var(--cyan);background:rgba(0,200,255,0.08)"
+                  onclick="loadLogs()">↻ Refresh</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <div class="log-row hd">
+          <div>Zeitstempel</div>
+          <div>User</div>
+          <div>Aktion</div>
+          <div>Parameter</div>
+        </div>
+        <div id="logs-body"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ══ USER DRAWER ════════════════════════════════════════════════════════ -->
+<div id="drawer-overlay" onclick="closeDrawer()"></div>
+<div id="drawer">
+  <div class="drawer-header">
+    <div class="drawer-avatar" id="d-avatar">👤</div>
+    <div>
+      <div class="drawer-name" id="d-name">—</div>
+      <div class="drawer-id"  id="d-id">—</div>
+    </div>
+    <button class="drawer-close" onclick="closeDrawer()">✕</button>
+  </div>
+  <div class="drawer-body" id="drawer-body">
+    <div class="loading"><div class="spin"></div> Lade Daten…</div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ════════════════════════════════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════════════════════════════════
+let users_all  = [];
+let users_filt = [];
+let logs_all   = [];
+let logs_filt  = [];
+let sort_key   = 'last_seen';
+let sort_asc   = false;
+let statsData  = null;
+let pollData   = [];
+let evtSrc     = null;
+
+// ════════════════════════════════════════════════════════════════════
+//  AUTH CHECK
+// ════════════════════════════════════════════════════════════════════
+async function checkAuth() {
+  try {
+    const r = await fetch('/admin/check');
+    const d = await r.json();
+    if (!d.authed) window.location.href = '/admin/login';
+    else init();
+  } catch {
+    window.location.href = '/admin/login';
+  }
+}
+
+function logout() {
+  window.location.href = '/admin/logout';
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  NAVIGATION
+// ════════════════════════════════════════════════════════════════════
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('view-' + id).classList.add('active');
+  document.getElementById('nav-' + id).classList.add('active');
+
+  if (id === 'users'  && users_all.length  === 0) loadUsers();
+  if (id === 'guilds' ) loadGuilds();
+  if (id === 'polls'  ) renderPolls();
+  if (id === 'logs'   && logs_all.length   === 0) loadLogs();
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  LOAD DATA
+// ════════════════════════════════════════════════════════════════════
+async function api(path) {
+  const r = await fetch(path);
+  if (r.status === 401) { window.location.href = '/admin/login'; throw new Error('Unauth'); }
+  return r.json();
+}
+
+async function init() {
+  await Promise.all([loadStats(), loadPolls()]);
+  connectSSE();
+}
+
+async function loadStats() {
+  try {
+    statsData = await api('/api/admin/stats');
+    renderDashboard();
+  } catch(e) { console.error(e); }
+}
+
+async function loadUsers() {
+  document.getElementById('users-tbody').innerHTML = `<tr><td colspan="7"><div class="loading"><div class="spin"></div>Lade…</div></td></tr>`;
+  try {
+    users_all  = await api('/api/admin/users');
+    users_filt = [...users_all];
+    document.getElementById('nb-users').textContent = users_all.length;
+    sortUsers(sort_key, true);
+  } catch(e) { console.error(e); }
+}
+
+async function loadGuilds() {
+  const el = document.getElementById('guilds-content');
+  el.innerHTML = `<div class="loading"><div class="spin"></div>Lade…</div>`;
+  try {
+    const guilds = await api('/api/admin/guilds');
+    renderGuilds(guilds);
+  } catch(e) { console.error(e); }
+}
+
+async function loadLogs() {
+  document.getElementById('logs-body').innerHTML = `<div class="loading"><div class="spin"></div>Lade…</div>`;
+  try {
+    logs_all  = await api('/api/admin/commands?limit=200');
+    logs_filt = [...logs_all];
+    document.getElementById('nb-logs').textContent = logs_all.length;
+    renderLogs();
+  } catch(e) { console.error(e); }
+}
+
+async function loadPolls() {
+  try {
+    pollData = await api('/api/status');
+    document.getElementById('nb-guilds').textContent = pollData.length;
+    renderPolls();
+  } catch(e) { console.error(e); }
+}
+
+// SSE for poll updates
+// Polling every 2s instead of SSE
+let _pollInterval = null;
+function connectSSE() {
+  if (_pollInterval) clearInterval(_pollInterval);
+  _pollInterval = setInterval(pollPanelStatus, 2000);
+  pollPanelStatus();
+}
+
+async function pollPanelStatus() {
+  try {
+    const r = await fetch('/api/events');
+    if (r.status === 401) { window.location.href = '/admin/login'; return; }
+    const data = await r.json();
+    pollData = data;
+    document.getElementById('status-orb').style.background = 'var(--green)';
+    renderPolls();
+  } catch {
+    document.getElementById('status-orb').style.background = 'var(--red)';
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  RENDER DASHBOARD
+// ════════════════════════════════════════════════════════════════════
+function renderDashboard() {
+  if (!statsData) return;
+  const s = statsData;
+
+  document.getElementById('kpi-users').textContent    = s.total_users;
+  document.getElementById('kpi-guilds').textContent   = s.total_guilds;
+  document.getElementById('kpi-commands').textContent = s.total_commands;
+  document.getElementById('kpi-votes').textContent    = s.total_votes;
+  document.getElementById('kpi-games').textContent    = s.total_games;
+  document.getElementById('dash-updated').textContent = 'Aktualisiert: ' + new Date().toLocaleTimeString('de-DE');
+
+  // Top users
+  const topEl = document.getElementById('top-users-list');
+  if (!s.top_users || !s.top_users.length) {
+    topEl.innerHTML = `<div class="empty"><div class="ico">🛸</div>Noch keine Daten</div>`;
+  } else {
+    topEl.innerHTML = s.top_users.map((u, i) => `
+      <div class="log-row" style="grid-template-columns:30px 200px 80px 80px 80px;cursor:pointer" onclick="openDrawer('${u.user_id}')">
+        <div style="color:var(--muted);font-family:var(--font-mono)">${i+1}</div>
+        <div class="user-cell">
+          <div class="avatar">${u.avatar_url ? `<img src="${u.avatar_url}" onerror="this.parentElement.textContent='👤'">` : '👤'}</div>
+          <span style="color:var(--cyan)">${esc(u.display || u.username || u.user_id)}</span>
+        </div>
+        <div><span class="pill p">${u.total_games || 0} 🎮</span></div>
+        <div><span class="pill g">${u.on_time_count || 0} ✅</span></div>
+        <div><span class="pill y">${u.late_count || 0} 🕒</span></div>
+      </div>`).join('');
+  }
+
+  // Activity bars
+  const barsEl = document.getElementById('activity-bars');
+  const daily  = s.daily_votes || {};
+  const dates  = Object.keys(daily).sort().reverse().slice(0, 7).reverse();
+  const max    = Math.max(...Object.values(daily), 1);
+  barsEl.innerHTML = dates.map(d => {
+    const v   = daily[d] || 0;
+    const pct = Math.round((v / max) * 100);
+    const lbl = d.slice(5); // MM-DD
+    return `<div class="bar-row">
+      <div class="bar-label">${lbl}</div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:${pct}%;background:linear-gradient(90deg,var(--cyan),var(--green))"></div>
+      </div>
+      <div class="bar-val">${v}</div>
+    </div>`;
+  }).join('') || '<div style="padding:16px;color:var(--muted);font-family:var(--font-mono);font-size:12px">Noch keine Daten</div>';
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  RENDER USERS TABLE
+// ════════════════════════════════════════════════════════════════════
+function renderUsers() {
+  const tbody = document.getElementById('users-tbody');
+  document.getElementById('user-count').textContent = `${users_filt.length} Einträge`;
+  if (!users_filt.length) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty"><div class="ico">🔍</div>Keine Treffer</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = users_filt.map(u => {
+    const lastSeen = fmtDate(u.last_seen);
+    const isNew    = isNewUser(u.first_seen);
+    return `<tr onclick="openDrawer('${u.user_id}')">
+      <td>
+        <div class="user-cell">
+          <div class="avatar">
+            ${u.avatar_url ? `<img src="${u.avatar_url}" onerror="this.parentElement.textContent='👤'">` : '👤'}
+          </div>
+          <div>
+            <div style="font-weight:600;color:var(--text)">${esc(u.display || u.username || 'Unbekannt')}${isNew?' <span class="pill g" style="font-size:9px">NEU</span>':''}</div>
+            <div class="mono">${u.user_id}</div>
+          </div>
+        </div>
+      </td>
+      <td><span class="pill p">${u.total_games || 0}</span></td>
+      <td><span class="pill g">${u.on_time_count || 0}</span></td>
+      <td><span class="pill y">${u.late_count || 0}</span></td>
+      <td><span class="pill r">${u.absent_count || 0}</span></td>
+      <td><span style="color:var(--cyan);font-family:var(--font-mono)">${u.command_count || 0}</span></td>
+      <td><span class="mono">${lastSeen}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function filterUsers() {
+  const q = document.getElementById('user-search').value.toLowerCase();
+  users_filt = users_all.filter(u =>
+    (u.display || '').toLowerCase().includes(q) ||
+    (u.username || '').toLowerCase().includes(q) ||
+    (u.user_id || '').includes(q)
+  );
+  renderUsers();
+}
+
+function sortUsers(key, keep=false) {
+  if (!keep) sort_asc = sort_key === key ? !sort_asc : false;
+  sort_key = key;
+  users_filt.sort((a, b) => {
+    const va = a[key] ?? '';
+    const vb = b[key] ?? '';
+    if (typeof va === 'number') return sort_asc ? va-vb : vb-va;
+    return sort_asc ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
+  });
+  renderUsers();
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  RENDER GUILDS
+// ════════════════════════════════════════════════════════════════════
+function renderGuilds(guilds) {
+  const el = document.getElementById('guilds-content');
+  if (!guilds.length) {
+    el.innerHTML = `<div class="empty"><div class="ico">🌐</div>Keine Guilds gefunden</div>`;
+    return;
+  }
+  el.innerHTML = guilds.map(g => `
+    <div class="table-wrap" style="margin-bottom:16px">
+      <div class="table-toolbar">
+        <span style="font-family:var(--font-mono);color:var(--cyan);font-size:13px">⬡ ${esc(g.guild_name || g.guild_id)}</span>
+        <span class="mono" style="margin-left:8px">${g.guild_id}</span>
+        <span class="pill c" style="margin-left:auto">${g.member_count || '?'} Member</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;padding:16px">
+        ${statBox('Gesamte Umfragen', g.total_polls || 0, 'g')}
+        ${statBox('Commands', g.total_commands || 0, 'c')}
+        ${statBox('Erste Aktivität', fmtDateShort(g.first_seen), 'y', true)}
+        ${statBox('Letzte Aktivität', fmtDateShort(g.last_activity), 'p', true)}
+      </div>
+      ${renderDailyMini(g.daily_stats)}
+    </div>`).join('');
+}
+
+function statBox(lbl, val, cls, text=false) {
+  return `<div class="d-stat">
+    <div class="d-stat-val ${cls}" style="${text?'font-size:14px':''}">${val}</div>
+    <div class="d-stat-lbl">${lbl}</div>
+  </div>`;
+}
+
+function renderDailyMini(daily) {
+  if (!daily || !Object.keys(daily).length) return '';
+  const dates = Object.keys(daily).sort().slice(-7);
+  const max   = Math.max(...dates.map(d => (daily[d]?.votes || 0) + (daily[d]?.commands || 0)), 1);
+  return `<div style="padding:0 16px 16px">
+    <div style="font-family:var(--font-mono);font-size:9px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px">Aktivität (7 Tage)</div>
+    <div class="bar-chart">
+      ${dates.map(d => {
+        const v   = (daily[d]?.votes||0) + (daily[d]?.commands||0);
+        const pct = Math.round((v/max)*100);
+        return `<div class="bar-row">
+          <div class="bar-label">${d.slice(5)}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:var(--cyan)"></div></div>
+          <div class="bar-val">${v}</div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  RENDER POLLS
+// ════════════════════════════════════════════════════════════════════
+function renderPolls() {
+  const el = document.getElementById('polls-content');
+  if (!pollData.length) {
+    el.innerHTML = `<div class="empty"><div class="ico">◌</div>Keine Umfragen</div>`;
+    return;
+  }
+  el.innerHTML = pollData.map(p => {
+    const tc = p.total_players >= 4 ? 'g' : p.total_players >= 1 ? 'y' : 'r';
+    return `
+    <div class="table-wrap" style="margin-bottom:16px">
+      <div class="table-toolbar">
+        <span style="font-family:var(--font-mono);color:var(--cyan)">◌ Guild ${p.guild_id.slice(-6)}</span>
+        ${p.poll_id ? `<span class="pill c">ID: ${p.poll_id}</span>` : ''}
+        ${p.closed ? `<span class="pill r">🔒 Geschlossen</span>` : `<span class="pill g">● Offen</span>`}
+        ${p.is_today ? `<span class="pill g">Heute</span>` : `<span class="pill r">Inaktiv</span>`}
+        <span class="pill ${tc}" style="margin-left:auto">🎮 ${p.game_time}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:16px">
+        <div class="d-stat"><div class="d-stat-val g">${p.on_time.length}</div><div class="d-stat-lbl">✅ Pünktlich</div></div>
+        <div class="d-stat"><div class="d-stat-val y">${Object.keys(p.late).length}</div><div class="d-stat-lbl">🕒 Später</div></div>
+        <div class="d-stat"><div class="d-stat-val r">${p.absent.length}</div><div class="d-stat-lbl">❌ Absent</div></div>
+      </div>
+      <div style="padding:0 16px 16px;display:flex;gap:10px;flex-wrap:wrap">
+        <button class="logout-btn" style="border-color:var(--yellow);color:var(--yellow);background:rgba(255,204,0,0.08)" onclick="setTime('${p.guild_id}')">⏰ Zeit ändern</button>
+        ${!p.closed ? `<button class="logout-btn" style="border-color:var(--orange);color:var(--orange);background:rgba(255,136,0,0.08)" onclick="closePoll('${p.guild_id}')">🔒 Schließen</button>` : ''}
+        <button class="logout-btn" onclick="resetPoll('${p.guild_id}')">🗑 Reset</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  RENDER LOGS
+// ════════════════════════════════════════════════════════════════════
+function renderLogs() {
+  const el = document.getElementById('logs-body');
+  if (!logs_filt.length) {
+    el.innerHTML = `<div class="empty"><div class="ico">≡</div>Keine Logs</div>`;
+    return;
+  }
+  const cmdColor = { start:'var(--green)', stop:'var(--red)', reset:'var(--orange)',
+                     zusammenfassung:'var(--cyan)', teams:'var(--purple)',
+                     uhrzeit:'var(--yellow)', hilfe:'var(--muted)' };
+  el.innerHTML = logs_filt.map(l => `
+    <div class="log-row">
+      <div class="log-ts">${fmtDateTime(l.ts)}</div>
+      <div class="log-user" style="cursor:pointer" onclick="openDrawer('${l.user_id}')">${esc(l.display || l.username || l.user_id)}</div>
+      <div class="log-cmd" style="color:${cmdColor[l.action]||'var(--text)'}">${l.action}</div>
+      <div class="log-params">${esc(l.params || '—')}</div>
+    </div>`).join('');
+}
+
+function filterLogs() {
+  const q = document.getElementById('log-search').value.toLowerCase();
+  logs_filt = logs_all.filter(l =>
+    (l.action||'').toLowerCase().includes(q) ||
+    (l.display||'').toLowerCase().includes(q) ||
+    (l.username||'').toLowerCase().includes(q) ||
+    (l.params||'').toLowerCase().includes(q)
+  );
+  renderLogs();
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  USER DRAWER
+// ════════════════════════════════════════════════════════════════════
+async function openDrawer(uid) {
+  document.getElementById('drawer-overlay').classList.add('open');
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('d-name').textContent = 'Lade…';
+  document.getElementById('d-id').textContent   = uid;
+  document.getElementById('d-avatar').innerHTML = '👤';
+  document.getElementById('drawer-body').innerHTML = `<div class="loading"><div class="spin"></div> Lade Daten…</div>`;
+
+  try {
+    const u = await api(`/api/admin/user/${uid}`);
+    renderDrawer(u);
+  } catch {
+    document.getElementById('drawer-body').innerHTML = `<div class="empty"><div class="ico">❌</div>Fehler beim Laden</div>`;
+  }
+}
+
+function renderDrawer(u) {
+  // Header
+  document.getElementById('d-name').textContent = u.display || u.username || 'Unbekannt';
+  document.getElementById('d-id').textContent   = `ID: ${u.user_id}`;
+  const avEl = document.getElementById('d-avatar');
+  avEl.innerHTML = u.avatar_url
+    ? `<img src="${u.avatar_url}" onerror="this.parentElement.textContent='👤'">`
+    : '👤';
+
+  const totalVotes   = (u.on_time_count||0) + (u.late_count||0) + (u.absent_count||0);
+  const attendRate   = totalVotes > 0 ? Math.round(((u.on_time_count||0) + (u.late_count||0)) / totalVotes * 100) : 0;
+
+  // Vote history (last 15)
+  const recentVotes = (u.vote_history || []).slice(-15).reverse();
+  const voteIcons   = { on_time:'✅', late:'🕒', absent:'❌', removed:'↩️' };
+  const voteLabels  = { on_time:'Pünktlich', late:'Später', absent:'Abwesend', removed:'Rückgängig' };
+
+  document.getElementById('drawer-body').innerHTML = `
+    <!-- Stats Grid -->
+    <div class="d-section">
+      <div class="d-title">Statistiken</div>
+      <div class="d-grid">
+        <div class="d-stat"><div class="d-stat-val p">${u.total_games||0}</div><div class="d-stat-lbl">Spiele</div></div>
+        <div class="d-stat"><div class="d-stat-val c">${attendRate}%</div><div class="d-stat-lbl">Teilnahmerate</div></div>
+        <div class="d-stat"><div class="d-stat-val g">${u.on_time_count||0}</div><div class="d-stat-lbl">✅ Pünktlich</div></div>
+        <div class="d-stat"><div class="d-stat-val y">${u.late_count||0}</div><div class="d-stat-lbl">🕒 Später</div></div>
+        <div class="d-stat"><div class="d-stat-val r">${u.absent_count||0}</div><div class="d-stat-lbl">❌ Abwesend</div></div>
+        <div class="d-stat"><div class="d-stat-val c">${u.command_count||0}</div><div class="d-stat-lbl">Commands</div></div>
+      </div>
+    </div>
+
+    <!-- Account Info -->
+    <div class="d-section">
+      <div class="d-title">Account Info</div>
+      <div class="d-row"><span class="d-row-key">Username</span><span class="d-row-val">${esc(u.username||'—')}</span></div>
+      <div class="d-row"><span class="d-row-key">Display Name</span><span class="d-row-val">${esc(u.display||'—')}</span></div>
+      <div class="d-row"><span class="d-row-key">Discord ID</span><span class="d-row-val" style="font-family:var(--font-mono);font-size:11px">${u.user_id}</span></div>
+      <div class="d-row"><span class="d-row-key">Zuerst gesehen</span><span class="d-row-val">${fmtDateTime(u.first_seen)}</span></div>
+      <div class="d-row"><span class="d-row-key">Zuletzt aktiv</span><span class="d-row-val">${fmtDateTime(u.last_seen)}</span></div>
+      <div class="d-row"><span class="d-row-key">Guilds</span><span class="d-row-val">${(u.guild_details||[]).map(g=>`<span class="pill c" style="font-size:10px">${esc(g.name)}</span>`).join(' ')||'—'}</span></div>
+    </div>
+
+    <!-- Attendance Bar -->
+    <div class="d-section">
+      <div class="d-title">Teilnahme-Verteilung</div>
+      <div class="bar-chart">
+        ${totalVotes > 0 ? `
+        <div class="bar-row">
+          <div class="bar-label">Pünktlich</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${Math.round((u.on_time_count||0)/totalVotes*100)}%;background:var(--green)"></div></div>
+          <div class="bar-val">${u.on_time_count||0}</div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label">Später</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${Math.round((u.late_count||0)/totalVotes*100)}%;background:var(--yellow)"></div></div>
+          <div class="bar-val">${u.late_count||0}</div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label">Abwesend</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${Math.round((u.absent_count||0)/totalVotes*100)}%;background:var(--red)"></div></div>
+          <div class="bar-val">${u.absent_count||0}</div>
+        </div>` : '<div style="color:var(--muted);font-size:12px;font-family:var(--font-mono)">Noch keine Abstimmungen</div>'}
+      </div>
+    </div>
+
+    <!-- Vote History -->
+    <div class="d-section">
+      <div class="d-title">Letzte Abstimmungen (${recentVotes.length})</div>
+      ${recentVotes.length ? recentVotes.map(v => `
+        <div class="vote-entry">
+          <span class="vote-icon">${voteIcons[v.vote]||'❓'}</span>
+          <div>
+            <div style="font-size:12px;font-weight:600">${voteLabels[v.vote]||v.vote}</div>
+            <div style="font-size:10px;color:var(--muted);font-family:var(--font-mono)">${v.game_time||'—'} Uhr • Poll: ${v.poll_id||'—'}</div>
+          </div>
+          <span class="vote-time">${fmtDateTime(v.ts)}</span>
+        </div>`).join('')
+      : '<div style="color:var(--muted);font-size:12px;font-family:var(--font-mono)">Keine Abstimmungshistorie</div>'}
+    </div>`;
+}
+
+function closeDrawer() {
+  document.getElementById('drawer-overlay').classList.remove('open');
+  document.getElementById('drawer').classList.remove('open');
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  POLL ACTIONS
+// ════════════════════════════════════════════════════════════════════
+async function setTime(guild_id) {
+  const t = prompt('Neue Spielzeit (HH:MM):', '20:00');
+  if (!t || !t.match(/^\d{1,2}:\d{2}$/)) return;
+  const [h,m] = t.split(':').map(Number);
+  if (h>23||m>59) { toast('❌ Ungültige Zeit', true); return; }
+  const r = await (await fetch('/api/set_time',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({guild_id,time:`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`})})).json();
+  r.ok ? toast(`✅ Zeit: ${r.time} Uhr`) : toast(`❌ ${r.error}`, true);
+}
+
+async function closePoll(guild_id) {
+  if (!confirm('Umfrage schließen?')) return;
+  const r = await (await fetch('/api/close_poll',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({guild_id})})).json();
+  r.ok ? toast('🔒 Umfrage geschlossen') : toast('❌ Fehler', true);
+}
+
+async function resetPoll(guild_id) {
+  if (!confirm('Abstimmung wirklich komplett zurücksetzen?')) return;
+  const r = await (await fetch('/api/reset',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({guild_id})})).json();
+  r.ok ? toast('🔄 Zurückgesetzt') : toast('❌ Fehler', true);
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  UTILS
+// ════════════════════════════════════════════════════════════════════
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function fmtDate(iso) {
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString('de-DE', {day:'2-digit',month:'2-digit',year:'2-digit'})
+           + ' ' + d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+  } catch { return iso; }
+}
+
+function fmtDateShort(iso) {
+  if (!iso) return '—';
+  try { return new Date(iso).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'2-digit'}); }
+  catch { return '—'; }
+}
+
+function fmtDateTime(iso) {
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'}) + ' '
+         + d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  } catch { return iso; }
+}
+
+function isNewUser(first_seen) {
+  if (!first_seen) return false;
+  return (Date.now() - new Date(first_seen).getTime()) < 7 * 24 * 3600 * 1000;
+}
+
+let _tt;
+function toast(msg, err=false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className   = err ? 'err' : '';
+  el.classList.add('show');
+  clearTimeout(_tt);
+  _tt = setTimeout(()=>el.classList.remove('show'), 3000);
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  KEYBOARD
+// ════════════════════════════════════════════════════════════════════
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeDrawer();
+});
+
+// ════════════════════════════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════════════════════════════
+checkAuth();
+</script>
+</body>
+</html>

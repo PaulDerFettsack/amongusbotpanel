@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Among Us — Registrierung</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'IBM Plex Mono', monospace;
+            background: #04060f;
+            color: #d0e8ff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .stars {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            background: #04060f;
+        }
+
+        .container {
+            max-width: 500px;
+            width: 90%;
+            background: rgba(8, 15, 35, 0.6);
+            border: 1px solid rgba(100, 160, 255, 0.2);
+            border-radius: 20px;
+            padding: 50px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 40px rgba(0, 229, 160, 0.1);
+            animation: slideUp 0.6s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 32px;
+            color: #00e5a0;
+            margin-bottom: 12px;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #5a7899;
+            font-size: 12px;
+            margin-bottom: 30px;
+            letter-spacing: 1px;
+        }
+
+        .discord-info {
+            background: rgba(88, 101, 242, 0.1);
+            border: 1px solid rgba(88, 101, 242, 0.3);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 30px;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .discord-info strong {
+            color: #5865f2;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        label {
+            display: block;
+            font-size: 11px;
+            color: #4db8ff;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        input {
+            width: 100%;
+            height: 44px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(100, 160, 255, 0.2);
+            border-radius: 8px;
+            padding: 0 16px;
+            color: #00e5a0;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        input:focus {
+            border-color: #4db8ff;
+            box-shadow: 0 0 12px rgba(77, 184, 255, 0.2);
+        }
+
+        input::placeholder {
+            color: rgba(77, 184, 255, 0.5);
+        }
+
+        button {
+            width: 100%;
+            height: 44px;
+            background: linear-gradient(135deg, rgba(0, 229, 160, 0.15), rgba(77, 184, 255, 0.15));
+            border: 1px solid rgba(0, 229, 160, 0.5);
+            border-radius: 8px;
+            color: #00e5a0;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background: rgba(0, 229, 160, 0.2);
+            box-shadow: 0 0 20px rgba(0, 229, 160, 0.3);
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 11px;
+            color: #5a7899;
+        }
+
+        .footer a {
+            color: #4db8ff;
+            text-decoration: none;
+            border-bottom: 1px solid rgba(77, 184, 255, 0.3);
+        }
+
+        .footer a:hover {
+            border-bottom-color: #4db8ff;
+        }
+
+        .error {
+            background: rgba(255, 59, 92, 0.1);
+            border: 1px solid rgba(255, 59, 92, 0.3);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 24px;
+            font-size: 11px;
+            color: #ff3b5c;
+            letter-spacing: 0.5px;
+        }
+
+        .success {
+            background: rgba(0, 229, 160, 0.1);
+            border: 1px solid rgba(0, 229, 160, 0.3);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 24px;
+            font-size: 11px;
+            color: #00e5a0;
+            letter-spacing: 0.5px;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            color: #4db8ff;
+            font-size: 12px;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid rgba(77, 184, 255, 0.3);
+            border-top-color: #4db8ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="stars"></div>
+    <div class="container">
+        <h1>✨ NEW CREW</h1>
+        <p class="subtitle">Willkommen im Among Us Panel</p>
+
+        <div id="discord-profile" class="discord-info">
+            <strong id="discord-username">Laden…</strong><br>
+            <small id="discord-tag"></small>
+        </div>
+
+        <div id="error" class="error" style="display: none;"></div>
+        <div id="success" class="success" style="display: none;"></div>
+
+        <form id="registerForm" onsubmit="handleRegister(event)">
+            <div class="form-group">
+                <label>Panel Benutzername</label>
+                <input type="text" id="username" placeholder="z.B. crewmate_123…" required>
+                <small style="color: #5a7899; font-size: 10px; margin-top: 4px; display: block;">
+                    Wird verwendet um dich im Panel anzumelden
+                </small>
+            </div>
+
+            <div class="form-group">
+                <label>Passwort</label>
+                <input type="password" id="password" placeholder="Mindestens 8 Zeichen…" minlength="8" required>
+            </div>
+
+            <div class="form-group">
+                <label>Passwort wiederholen</label>
+                <input type="password" id="password2" placeholder="Passwort bestätigen…" minlength="8" required>
+            </div>
+
+            <div class="form-group">
+                <label>Einladungscode</label>
+                <input type="text" id="invite_code" placeholder="Nur falls erforderlich…">
+            </div>
+
+            <button type="submit">🚀 Registrieren</button>
+            <div class="loading" id="loading">
+                <div class="spinner"></div> Wird registriert…
+            </div>
+        </form>
+
+        <div class="footer">
+            <p><a href="/login">← Zurück zum Login</a></p>
+        </div>
+    </div>
+
+    <script>
+        // Discord-Infos laden
+        fetch('/api/pending_discord')
+            .then(r => r.json())
+            .then(data => {
+                if (data.discord_username) {
+                    document.getElementById('discord-username').textContent = 
+                        `💜 ${data.discord_username}`;
+                    document.getElementById('discord-tag').textContent = 
+                        `@${data.discord_tag || data.discord_username}`;
+                }
+            })
+            .catch(err => console.error(err));
+
+        function handleRegister(e) {
+            e.preventDefault();
+
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const password2 = document.getElementById('password2').value;
+            const invite_code = document.getElementById('invite_code').value.trim();
+
+            document.getElementById('error').style.display = 'none';
+            document.getElementById('success').style.display = 'none';
+
+            // Validierung
+            if (username.length < 3) {
+                showError('Benutzername muss mindestens 3 Zeichen lang sein');
+                return;
+            }
+
+            if (password !== password2) {
+                showError('Passwörter stimmen nicht überein');
+                return;
+            }
+
+            if (password.length < 8) {
+                showError('Passwort muss mindestens 8 Zeichen lang sein');
+                return;
+            }
+
+            document.getElementById('loading').style.display = 'block';
+
+            fetch('/api/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username,
+                    password,
+                    invite_code: invite_code || undefined
+                })
+            })
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('loading').style.display = 'none';
+                    if (data.ok) {
+                        document.getElementById('success').textContent = 
+                            '✅ Registrierung erfolgreich! Werden weitergeleitet…';
+                        document.getElementById('success').style.display = 'block';
+                        setTimeout(() => window.location.href = '/', 2000);
+                    } else {
+                        showError(data.error || 'Registrierung fehlgeschlagen');
+                    }
+                })
+                .catch(err => {
+                    showError('Netzwerkfehler: ' + err.message);
+                    document.getElementById('loading').style.display = 'none';
+                });
+        }
+
+        function showError(msg) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = '❌ ' + msg;
+            errorDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
