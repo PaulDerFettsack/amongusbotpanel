@@ -25,16 +25,21 @@ ADMIN_DISCORD_ID = "148269980024688240"
 TOKEN_FILE = "admin_token.txt"
 
 def get_or_create_token():
+    # Zuerst aus Umgebungsvariable lesen
+    env_token = os.environ.get("ADMIN_TOKEN", "")
+    if env_token:
+        return env_token
+    
+    # Fallback: Datei (nur lokal)
     if os.path.exists(TOKEN_FILE):
         with open(TOKEN_FILE) as f:
             return f.read().strip()
+    
     token = secrets.token_urlsafe(32)
     with open(TOKEN_FILE, "w") as f:
         f.write(token)
     print(f"\n{'='*50}")
-    print(f"ADMIN TOKEN (nur einmal angezeigt):")
-    print(f"  {token}")
-    print(f"Öffne: http://localhost:5001/admin/login?token={token}")
+    print(f"ADMIN TOKEN: {token}")
     print(f"{'='*50}\n")
     return token
 
