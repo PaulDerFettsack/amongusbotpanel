@@ -475,7 +475,7 @@ def api_register():
     body           = request.json or {}
     panel_username = body.get("username","").strip()
     panel_password = body.get("password","")
-    invite = body.get("invite_code", body.get("invite", "")).strip()
+    invite         = body.get("invite","").strip()
 
     # Validierung
     if not panel_username or not panel_password:
@@ -588,7 +588,10 @@ def api_set_time():
     data.setdefault(gid,{})
     data[gid]["game_hour"]    = h
     data[gid]["game_minute"]  = m
-    data[gid]["time_changed"] = True
+    # Verändert nur wenn anders als Original
+    orig_h = data[gid].get("original_hour", h)
+    orig_m = data[gid].get("original_minute", m)
+    data[gid]["time_changed"] = not (h == orig_h and m == orig_m)
     # Signal an Bot: Umfragenachricht updaten
     data[gid]["pending_action"] = "update_poll_message"
     save_data(data); pass  # polling: no SSE push needed
