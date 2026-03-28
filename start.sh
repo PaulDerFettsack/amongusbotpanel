@@ -2,7 +2,7 @@
 # Startet Bot + Web Panel parallel
 
 echo "🤖 Starte Discord Bot..."
-python bot.py &
+python app.py &
 BOT_PID=$!
 
 echo "🌐 Starte Web Panel..."
