@@ -214,14 +214,19 @@ def build_poll_embed(gd: dict, guild_id: str) -> discord.Embed:
     poll_date= gd.get("date", today_str())
     closed   = gd.get("closed", False)
     total    = len(on_time) + len(late)
+    time_changed = gd.get("time_changed", False)
 
     color = discord.Color.green() if total >= 4 else discord.Color.yellow() if total >= 1 else discord.Color.red()
     if closed:
         color = discord.Color.greyple()
 
+    time_display = f"{game_time} Uhr"
+    if time_changed:
+        time_display += " *(verändert)*"
+
     embed = discord.Embed(
         title=f"{'🔒 ' if closed else '🚀 '}Among Us — {poll_date}",
-        description=f"**Spielstart: {game_time} Uhr** {'🔒 Umfrage geschlossen' if closed else '● Abstimmung läuft'}",
+        description=f"**Spielstart: {time_display}** {'🔒 Umfrage geschlossen' if closed else '● Abstimmung läuft'}",
         color=color,
     )
 
@@ -586,6 +591,7 @@ async def cmd_uhrzeit(interaction: discord.Interaction, zeit: str):
     data.setdefault(gid, {})
     data[gid]["game_hour"]   = h
     data[gid]["game_minute"] = m
+    data[gid]["time_changed"] = True
     save_data(data)
 
     # Update poll message if active
