@@ -64,8 +64,9 @@ INVITE_CODE           = os.environ.get("INVITE_CODE",           "")
 DISCORD_API    = "https://discord.com/api/v10"
 DISCORD_SCOPES = "identify guilds.members.read"
 
-DATA_FILE  = "amogus_data.json"
-USERS_FILE = "amogus_users.json"
+DATA_DIR   = os.environ.get("DATA_DIR", ".")
+DATA_FILE  = os.path.join(DATA_DIR, "amogus_data.json")
+USERS_FILE = os.path.join(DATA_DIR, "amogus_users.json")
 TIMEZONE   = pytz.timezone("Europe/Berlin")
 SESSION_LIFETIME = 7 * 24 * 3600   # 7 Tage
 
@@ -334,6 +335,17 @@ def today_str():
 
 def build_status():
     data   = load_data()
+    logs   = load_logs()
+    users  = logs.get("users", {})
+
+    def user_info(uid):
+        u = users.get(str(uid), {})
+        return {
+            "id":      uid,
+            "name":    u.get("display") or u.get("username") or uid,
+            "avatar":  u.get("avatar_url", ""),
+        }
+
     result = []
     for guild_id, gd in data.items():
         parts = gd.get("participants", {"on_time":[],"late":{},"absent":[]})
@@ -353,6 +365,12 @@ def build_status():
             "summary_sent":  gd.get("summary_sent",False),
             "closed":        gd.get("closed",False),
             "total_players": len(parts.get("on_time",[])) + len(late),
+            "time_changed":  gd.get("time_changed", False),
+            # User info map: uid → {name, avatar}
+            "user_info":     {uid: user_info(uid) for uid in
+                              parts.get("on_time",[]) +
+                              list(late.keys()) +
+                              parts.get("absent",[])},
         })
     return result
 
@@ -475,7 +493,7 @@ def api_register():
     body           = request.json or {}
     panel_username = body.get("username","").strip()
     panel_password = body.get("password","")
-    invite = body.get("invite_code", body.get("invite", "")).strip()
+    invite         = body.get("invite","").strip()
 
     # Validierung
     if not panel_username or not panel_password:
