@@ -1,71 +1,62 @@
 """
 🚀 Main Entry Point für Railway Deployment
-Kombiniert beide Flask-Apps mit gemeinsamen Assets
+Nutzt Flask Blueprints statt Route-Merge
 """
 
 import os
 import sys
-from flask import Flask, jsonify, redirect, send_from_directory
+import secrets
+from flask import Flask, jsonify
 from flask_cors import CORS
 
 # ─────────────────────────────────────────────────────────────
-#  Initialisiere Hauptapp
+#  Eine einzige Flask-App, ein einziger secret_key
 # ─────────────────────────────────────────────────────────────
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", __import__('secrets').token_hex(32))
+
+# SECRET_KEY MUSS in Railway Variables gesetzt sein — sonst werden
+# Sessions bei jedem Redeploy ungültig!
+secret_key = os.environ.get("SECRET_KEY")
+if not secret_key:
+    print("[WARN] ⚠️  SECRET_KEY nicht gesetzt! Sessions überleben keinen Neustart.")
+    print("[WARN]    Railway Variables → SECRET_KEY = <zufälliger langer String>")
+    secret_key = secrets.token_hex(32)
+app.secret_key = secret_key
+
+# Session-Cookies: 7 Tage
+from datetime import timedelta
+app.permanent_session_lifetime = timedelta(days=7)
+app.config.update(
+    SESSION_COOKIE_SECURE=True,
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_NAME="amogus_sess",
+)
+
 CORS(app, supports_credentials=True)
 
 # ─────────────────────────────────────────────────────────────
-#  Importiere beide Module 
+#  Blueprints registrieren
 # ─────────────────────────────────────────────────────────────
 
 print("[STARTUP] Laden der Module...")
+
 try:
-    # Importiere die Blueprints/Apps
-    from web_panel import app as web_app_instance
-    from admin_server import app as admin_app_instance
-    print("[STARTUP] ✅ web_panel geladen")
-    print("[STARTUP] ✅ admin_server geladen")
+    from web_panel_bp import web_bp
+    app.register_blueprint(web_bp)
+    print("[STARTUP] ✅ web_panel Blueprint geladen")
 except Exception as e:
-    print(f"[ERROR] Fehler beim Importieren: {e}")
+    print(f"[ERROR] web_panel_bp: {e}")
     sys.exit(1)
 
-# ─────────────────────────────────────────────────────────────
-#  Merge alle Routes in die Hauptapp
-# ─────────────────────────────────────────────────────────────
-
-def merge_app_routes(source_app, target_app, url_prefix=""):
-    """Kopiert alle Routes von source_app zu target_app"""
-    for rule in source_app.url_map.iter_rules():
-        if rule.endpoint.startswith('static'):
-            continue  # Überspringe statische Dateien
-        
-        # Hole den Endpoint-Handler
-        endpoint = rule.endpoint
-        view_func = source_app.view_functions.get(endpoint)
-        
-        if view_func and endpoint not in target_app.view_functions:
-            # Registriere die Route in der Ziel-App
-            methods = list(rule.methods - {'HEAD', 'OPTIONS'})
-            rule_str = url_prefix + rule.rule if url_prefix else rule.rule
-            try:
-                target_app.add_url_rule(
-                    rule_str, 
-                    endpoint, 
-                    view_func, 
-                    methods=methods
-                )
-            except Exception as e:
-                print(f"[WARN] Route-Merge fehlgeschlagen: {endpoint} - {e}")
-
-# Merge web_panel Routes (sind hauptsächlich)
-merge_app_routes(web_app_instance, app)
-
-# Merge admin_server Routes 
-merge_app_routes(admin_app_instance, app)
-
-print("[STARTUP] ✅ Alle Routes registriert")
+try:
+    from admin_server_bp import admin_bp
+    app.register_blueprint(admin_bp)
+    print("[STARTUP] ✅ admin_server Blueprint geladen")
+except Exception as e:
+    print(f"[ERROR] admin_server_bp: {e}")
+    sys.exit(1)
 
 # ─────────────────────────────────────────────────────────────
 #  Health Check für Railway
@@ -74,34 +65,22 @@ print("[STARTUP] ✅ Alle Routes registriert")
 @app.route("/healthz")
 @app.route("/health")
 def health():
-    """Health-Check Endpoint für Railway"""
     return jsonify({
         "status": "healthy",
         "service": "Among Us Panel",
-        "version": "3.0"
+        "version": "3.1"
     }), 200
 
 # ─────────────────────────────────────────────────────────────
-#  Catch-All & Fehlerbehandlung
+#  Fehlerbehandlung
 # ─────────────────────────────────────────────────────────────
 
 @app.errorhandler(404)
 def not_found(error):
-    """Zeige verfügbare Endpoints bei 404"""
-    return jsonify({
-        "error": "Not Found",
-        "routes": [
-            "/",
-            "/admin",
-            "/login",
-            "/register",
-            "/health"
-        ]
-    }), 404
+    return jsonify({"error": "Not Found"}), 404
 
 @app.errorhandler(500)
 def server_error(error):
-    """Fehlerbehandlung für 500er"""
     print(f"[ERROR] 500: {error}", file=sys.stderr)
     return jsonify({"error": "Internal Server Error"}), 500
 
@@ -111,14 +90,5 @@ def server_error(error):
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    print(f"""
-╔═══════════════════════════════════════════════════════════╗
-║  🚀 Among Us Panel — Production Server                   ║
-╠═══════════════════════════════════════════════════════════╣
-║  🌐 http://localhost:{port:<45}  ║
-║  📊 /                      (Main Panel)                   ║
-║  🔐 /admin                 (Admin Console)                ║
-║  ❤️  /health               (Health Check)                 ║
-╚═══════════════════════════════════════════════════════════╝
-    """)
+    print(f"🚀 http://localhost:{port}")
     app.run(host="0.0.0.0", port=port, debug=False, threaded=True)
