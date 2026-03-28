@@ -37,8 +37,9 @@ load_dotenv()
 
 TOKEN      = os.environ.get("DISCORD_TOKEN", "")
 TIMEZONE   = pytz.timezone("Europe/Berlin")
-DATA_FILE  = "amogus_data.json"
-LOG_FILE   = "amogus_logs.json"
+DATA_DIR   = os.environ.get("DATA_DIR", ".")
+DATA_FILE  = os.path.join(DATA_DIR, "amogus_data.json")
+LOG_FILE   = os.path.join(DATA_DIR, "amogus_logs.json")
 
 if not TOKEN:
     raise RuntimeError("❌ DISCORD_TOKEN fehlt in .env / Railway Variables!")
