@@ -66,6 +66,7 @@ DISCORD_SCOPES = "identify guilds.members.read"
 
 DATA_DIR   = os.environ.get("DATA_DIR", ".")
 DATA_FILE  = os.path.join(DATA_DIR, "amogus_data.json")
+LOG_FILE   = os.path.join(DATA_DIR, "amogus_logs.json")
 USERS_FILE = os.path.join(DATA_DIR, "amogus_users.json")
 TIMEZONE   = pytz.timezone("Europe/Berlin")
 SESSION_LIFETIME = 7 * 24 * 3600   # 7 Tage
@@ -325,6 +326,12 @@ def load_data():
         with open(DATA_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
     return {}
+
+def load_logs():
+    if os.path.exists(LOG_FILE):
+        with open(LOG_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {"commands": [], "users": {}, "guilds": {}}
 
 def save_data(data):
     with open(DATA_FILE, "w", encoding="utf-8") as f:
