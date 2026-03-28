@@ -563,7 +563,58 @@ header {
 .no-data .ico { font-size:52px; margin-bottom:16px; }
 .no-data p { font-size:13px; line-height:1.8; }
 
-/* Responsive */
+/* ════════════════════════════════════════════
+   USER POPUP
+   ════════════════════════════════════════════ */
+#user-popup-overlay {
+  display:none; position:fixed; inset:0;
+  background:rgba(0,0,0,0.5); z-index:500;
+  backdrop-filter:blur(4px);
+  align-items:center; justify-content:center;
+}
+#user-popup-overlay.open { display:flex; }
+
+#user-popup {
+  background:rgba(8,15,35,0.95);
+  border:1px solid rgba(0,229,160,0.3);
+  border-radius:16px;
+  padding:28px;
+  min-width:280px; max-width:360px; width:90%;
+  box-shadow:0 0 40px rgba(0,229,160,0.15);
+  animation:fadein 0.2s ease both;
+  position:relative;
+}
+.popup-close {
+  position:absolute; top:14px; right:14px;
+  width:28px; height:28px; border-radius:6px;
+  background:rgba(255,59,92,0.1); border:1px solid rgba(255,59,92,0.3);
+  color:var(--imp); font-size:14px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  transition:all 0.2s;
+}
+.popup-close:hover { background:var(--imp); color:#fff; }
+.popup-avatar {
+  width:56px; height:56px; border-radius:50%;
+  border:2px solid var(--crew);
+  display:flex; align-items:center; justify-content:center;
+  font-size:26px; margin:0 auto 14px;
+  overflow:hidden; background:rgba(0,229,160,0.08);
+  box-shadow:0 0 16px rgba(0,229,160,0.2);
+}
+.popup-avatar img { width:100%; height:100%; object-fit:cover; }
+.popup-name {
+  font-family:'Orbitron',monospace; font-size:15px;
+  color:var(--crew); text-align:center; margin-bottom:4px;
+}
+.popup-row {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:8px 12px; border-radius:8px;
+  background:rgba(0,0,0,0.3); border:1px solid var(--rim);
+  margin-top:8px; font-size:11px;
+}
+.popup-row-key { color:var(--muted); letter-spacing:0.08em; }
+.popup-row-val { color:var(--text); font-family:'IBM Plex Mono',monospace; word-break:break-all; text-align:right; max-width:180px; }
+
 @media(max-width:560px){
   .stats-grid { gap:8px; }
   .stat-val { font-size:24px; }
@@ -672,6 +723,15 @@ header {
     </div>
   </div>
 
+</div>
+
+<div id="user-popup-overlay" onclick="closeUserPopup(event)">
+  <div id="user-popup">
+    <button class="popup-close" onclick="closeUserPopup()">✕</button>
+    <div class="popup-avatar" id="popup-avatar">👤</div>
+    <div class="popup-name" id="popup-name">—</div>
+    <div id="popup-rows"></div>
+  </div>
 </div>
 
 <div id="toast"></div>
@@ -984,24 +1044,29 @@ function renderGuild(gd) {
     </div>`;
 
   // Player row helper
-  function pRow(uid, type, time) {
+  function pRow(uid, type, time, userInfo) {
     const av   = type==='on_time'?'av-g':type==='late'?'av-y':'av-r';
     const ico  = type==='on_time'?'🟢':type==='late'?'🕒':'🔴';
+    const info = userInfo || {};
+    const name = info.name || uid;
+    const avatar = info.avatar
+      ? `<img src="${info.avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover">`
+      : ico;
     const right= type==='on_time'
       ? `<span class="badge bg">Pünktlich</span>`
       : type==='late'
         ? `<span class="p-time">${time && time!=='?'?time+' Uhr':'⏳ ausstehend'}</span>`
         : `<span class="badge br">Abwesend</span>`;
-    return `<div class="player-row">
-      <div class="p-avatar ${av}">${ico}</div>
-      <span class="p-id" title="ID: ${uid}">${uid}</span>
+    return `<div class="player-row" onclick="showUserPopup('${uid}','${name.replace(/'/g,"\\'")}','${info.avatar||''}','${type}','${time||''}')" style="cursor:pointer">
+      <div class="p-avatar ${av}">${avatar}</div>
+      <span class="p-id">${name}</span>
       ${right}
     </div>`;
   }
 
-  const onList  = onTime.length  ? onTime.map(u=>pRow(u,'on_time')).join('') : `<div class="empty">Noch niemand</div>`;
-  const lateList= lateIds.length ? lateIds.map(u=>pRow(u,'late',late[u])).join('') : `<div class="empty">Niemand</div>`;
-  const absList = absent.length  ? absent.map(u=>pRow(u,'absent')).join('') : `<div class="empty">Niemand</div>`;
+  const onList  = onTime.length  ? onTime.map(u=>pRow(u,'on_time',null,gd.user_info?.[u])).join('') : `<div class="empty">Noch niemand</div>`;
+  const lateList= lateIds.length ? lateIds.map(u=>pRow(u,'late',late[u],gd.user_info?.[u])).join('') : `<div class="empty">Niemand</div>`;
+  const absList = absent.length  ? absent.map(u=>pRow(u,'absent',null,gd.user_info?.[u])).join('') : `<div class="empty">Niemand</div>`;
 
   // Timeline
   const [gh, gm] = gd.game_time.split(':').map(Number);
@@ -1170,6 +1235,39 @@ function toast(msg, err=false) {
     }
   } catch { window.location.href='/login'; }
 })();
+
+// ════════════════════════════════════════════════════════════════════
+//  USER POPUP
+// ════════════════════════════════════════════════════════════════════
+
+function showUserPopup(uid, name, avatar, type, time) {
+  const typeLabels = { on_time: '✅ Pünktlich', late: `🕒 Kommt später (${time||'?'} Uhr)`, absent: '❌ Abwesend' };
+  const avEl = document.getElementById('popup-avatar');
+  avEl.innerHTML = avatar
+    ? `<img src="${avatar}" onerror="this.parentElement.textContent='👤'">`
+    : '👤';
+  document.getElementById('popup-name').textContent = name;
+  document.getElementById('popup-rows').innerHTML = `
+    <div class="popup-row">
+      <span class="popup-row-key">Discord ID</span>
+      <span class="popup-row-val">${uid}</span>
+    </div>
+    <div class="popup-row">
+      <span class="popup-row-key">Status</span>
+      <span class="popup-row-val">${typeLabels[type] || type}</span>
+    </div>
+  `;
+  document.getElementById('user-popup-overlay').classList.add('open');
+}
+
+function closeUserPopup(e) {
+  if (e && e.target !== document.getElementById('user-popup-overlay')) return;
+  document.getElementById('user-popup-overlay').classList.remove('open');
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.getElementById('user-popup-overlay').classList.remove('open');
+});
 
 connectSSE();
 fetchStatus();
