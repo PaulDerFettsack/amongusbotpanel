@@ -12,8 +12,9 @@ import pytz
 
 admin_bp = Blueprint("admin", __name__)
 
-DATA_FILE  = "amogus_data.json"
-LOG_FILE   = "amogus_logs.json"
+DATA_DIR   = os.environ.get("DATA_DIR", ".")
+DATA_FILE  = os.path.join(DATA_DIR, "amogus_data.json")
+LOG_FILE   = os.path.join(DATA_DIR, "amogus_logs.json")
 TIMEZONE   = pytz.timezone("Europe/Berlin")
 
 # ── EINZIGE ERLAUBTE DISCORD-ID ──────────────────────────────────────────────
