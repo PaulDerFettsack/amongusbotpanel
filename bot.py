@@ -476,14 +476,17 @@ async def cmd_start(interaction: discord.Interaction):
     poll_id = str(uuid.uuid4())[:8].upper()
 
     gd.update({
-        "date":          today_str(),
-        "poll_id":       poll_id,
-        "channel_id":    str(interaction.channel_id),
-        "participants":  {"on_time": [], "late": {}, "absent": []},
-        "reminder_sent": False,
-        "summary_sent":  False,
-        "closed":        False,
-        "pending_action": None,
+        "date":            today_str(),
+        "poll_id":         poll_id,
+        "channel_id":      str(interaction.channel_id),
+        "participants":    {"on_time": [], "late": {}, "absent": []},
+        "reminder_sent":   False,
+        "summary_sent":    False,
+        "closed":          False,
+        "pending_action":  None,
+        "time_changed":    False,
+        "original_hour":   gh,
+        "original_minute": gm,
     })
     save_data(data)
 
@@ -591,7 +594,10 @@ async def cmd_uhrzeit(interaction: discord.Interaction, zeit: str):
     data.setdefault(gid, {})
     data[gid]["game_hour"]   = h
     data[gid]["game_minute"] = m
-    data[gid]["time_changed"] = True
+    # Verändert nur wenn anders als Original
+    orig_h = data[gid].get("original_hour", h)
+    orig_m = data[gid].get("original_minute", m)
+    data[gid]["time_changed"] = not (h == orig_h and m == orig_m)
     save_data(data)
 
     # Update poll message if active
