@@ -475,7 +475,7 @@ def api_register():
     body           = request.json or {}
     panel_username = body.get("username","").strip()
     panel_password = body.get("password","")
-    invite         = body.get("invite","").strip()
+    invite = body.get("invite_code", body.get("invite", "")).strip()
 
     # Validierung
     if not panel_username or not panel_password:
